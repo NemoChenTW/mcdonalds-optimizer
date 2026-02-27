@@ -1,9 +1,9 @@
 /**
  * McDonald's order optimizer.
- * Strategies: combo meals, 1+1, sweetheart card (甜心卡).
+ * Strategies: combo meals, 1+1, sweetheart card (甜心卡), coupons.
  */
 
-function findBestCombinations(order, menuData, promoData) {
+function findBestCombinations(order, menuData, promoData, couponData) {
 
   // === Utilities ===
 
@@ -418,6 +418,162 @@ function findBestCombinations(order, menuData, promoData) {
           totalPrice > singleTotal
         );
       }
+    }
+  }
+
+  // --- Strategy 4: Coupons (BOGO + fixed bundles) ---
+
+  var coupons = (couponData && couponData.coupons) || [];
+
+  for (var ci = 0; ci < coupons.length; ci++) {
+    var coupon = coupons[ci];
+
+    if (coupon.type === "bogo") {
+      // BOGO: buy 2 of same item for coupon price
+      for (var oi = 0; oi < order.length; oi++) {
+        var o = order[oi];
+        if (fuzzyMatch(o.name, coupon.item) && o.quantity >= 2) {
+          var pairs = Math.floor(o.quantity / 2);
+          var leftover = o.quantity - pairs * 2;
+          var totalPrice = pairs * coupon.price + leftover * o.price;
+          // Add other items
+          var steps = [];
+          steps.push(coupon.name + "（" + coupon.code + "）x" + pairs + " — $" + (pairs * coupon.price));
+          if (leftover > 0) {
+            totalPrice += 0; // already counted
+            steps.push(o.name + " 單點 x" + leftover + " — $" + (leftover * o.price));
+          }
+          for (var j = 0; j < order.length; j++) {
+            if (j !== oi) {
+              totalPrice += order[j].price * order[j].quantity;
+              steps.push(order[j].name + " 單點 x" + order[j].quantity + " — $" + (order[j].price * order[j].quantity));
+            }
+          }
+          addResult(
+            coupon.name + "（" + coupon.code + "）",
+            totalPrice, steps, null,
+            totalPrice > singleTotal
+          );
+        }
+      }
+      // BOGO upgrade: user has 1 → suggest getting 2
+      for (var oi = 0; oi < order.length; oi++) {
+        var o = order[oi];
+        if (fuzzyMatch(o.name, coupon.item) && o.quantity === 1) {
+          var totalPrice = coupon.price;
+          var steps = [coupon.name + "（" + coupon.code + "）— $" + coupon.price];
+          for (var j = 0; j < order.length; j++) {
+            if (j !== oi) {
+              totalPrice += order[j].price * order[j].quantity;
+              steps.push(order[j].name + " 單點 x" + order[j].quantity + " — $" + (order[j].price * order[j].quantity));
+            }
+          }
+          addResult(
+            coupon.name + "（" + coupon.code + "）",
+            totalPrice, steps, o.name + " x1",
+            true
+          );
+        }
+      }
+    }
+
+    if (coupon.type === "fixed_bundle") {
+      // Fixed bundle: check if user's order items match bundle contents
+      var bundleItems = coupon.items.slice(); // copy
+      // Expand order: each unit as a separate entry for matching
+      var orderExpanded = [];
+      for (var oi = 0; oi < order.length; oi++) {
+        for (var q = 0; q < order[oi].quantity; q++) {
+          orderExpanded.push({ idx: oi, name: order[oi].name, price: order[oi].price });
+        }
+      }
+
+      // Try to match each bundle item to an order item
+      var bundleMatched = [];
+      for (var bi = 0; bi < bundleItems.length; bi++) bundleMatched.push(-1);
+      var orderUsed = [];
+      for (var ei = 0; ei < orderExpanded.length; ei++) orderUsed.push(false);
+
+      for (var bi = 0; bi < bundleItems.length; bi++) {
+        var slot = bundleItems[bi];
+        var isDrinkSlot = typeof slot === "string" && slot.indexOf("drink:") === 0;
+        var drinkMax = isDrinkSlot ? parseInt(slot.split(":")[1]) : 0;
+
+        for (var ei = 0; ei < orderExpanded.length; ei++) {
+          if (orderUsed[ei]) continue;
+          var oName = orderExpanded[ei].name;
+          var oPrice = orderExpanded[ei].price;
+
+          if (isDrinkSlot) {
+            if (isDrink(oName) && oPrice <= drinkMax) {
+              bundleMatched[bi] = ei;
+              orderUsed[ei] = true;
+              break;
+            }
+          } else {
+            if (fuzzyMatch(oName, slot)) {
+              bundleMatched[bi] = ei;
+              orderUsed[ei] = true;
+              break;
+            }
+          }
+        }
+      }
+
+      var matchedCount = 0;
+      for (var bi = 0; bi < bundleMatched.length; bi++) {
+        if (bundleMatched[bi] >= 0) matchedCount++;
+      }
+
+      // Need at least 2 items matched to be relevant
+      if (matchedCount < 2) continue;
+
+      // Calculate total: coupon price + unmatched order items at single price
+      var totalPrice = coupon.price;
+      var steps = [];
+      var coveredNames = [];
+      for (var bi = 0; bi < bundleItems.length; bi++) {
+        if (bundleMatched[bi] >= 0) {
+          coveredNames.push(orderExpanded[bundleMatched[bi]].name);
+        }
+      }
+      steps.push(coupon.name + "（" + coupon.code + "）— $" + coupon.price + "（含" + coveredNames.join("+") + "）");
+
+      // Unmatched bundle items = extras the user gets
+      var extras = [];
+      for (var bi = 0; bi < bundleItems.length; bi++) {
+        if (bundleMatched[bi] < 0) {
+          extras.push(bundleItems[bi]);
+        }
+      }
+
+      // Unmatched order items = need to add at single price
+      for (var ei = 0; ei < orderExpanded.length; ei++) {
+        if (!orderUsed[ei]) {
+          totalPrice += orderExpanded[ei].price;
+        }
+      }
+      // Group unmatched order items for display
+      var unmatchedByIdx = {};
+      for (var ei = 0; ei < orderExpanded.length; ei++) {
+        if (!orderUsed[ei]) {
+          var idx = orderExpanded[ei].idx;
+          unmatchedByIdx[idx] = (unmatchedByIdx[idx] || 0) + 1;
+        }
+      }
+      for (var idx in unmatchedByIdx) {
+        var cnt = unmatchedByIdx[idx];
+        steps.push(order[idx].name + " 單點 x" + cnt + " — $" + (cnt * order[idx].price));
+      }
+
+      var extrasStr = extras.length > 0 ? extras.join("、") : null;
+      var isUpgrade = totalPrice > singleTotal;
+
+      addResult(
+        coupon.name + "（" + coupon.code + "）",
+        totalPrice, steps, extrasStr,
+        isUpgrade
+      );
     }
   }
 

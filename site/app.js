@@ -1,17 +1,20 @@
 // --- State ---
 let menuData = null;
 let promoData = null;
+let couponData = null;
 let selected = {}; // { itemKey: quantity }
 let activeCategory = null;
 
 // --- Data Loading ---
 async function loadData() {
-  const [menuResp, promoResp] = await Promise.all([
+  const [menuResp, promoResp, couponResp] = await Promise.all([
     fetch("data/menu.json"),
     fetch("data/promotions.json"),
+    fetch("data/coupons.json"),
   ]);
   menuData = await menuResp.json();
   promoData = await promoResp.json();
+  couponData = await couponResp.json();
   renderCategories();
 }
 
@@ -111,7 +114,7 @@ function optimize() {
     return { name: item.name, price: item.price, quantity: qty, combos: item.combos || null };
   });
 
-  const results = findBestCombinations(order, menuData, promoData);
+  const results = findBestCombinations(order, menuData, promoData, couponData);
   renderResults(results, order);
 }
 
