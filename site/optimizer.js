@@ -9,7 +9,7 @@ function findBestCombinations(order, menuData, promoData) {
 
   // Normalize: 鷄→雞, strip whitespace
   function norm(s) {
-    return s.replace(/鷄/g, "雞").replace(/\s+/g, "");
+    return s.replace(/鷄/g, "雞").replace(/\s+/g, "").replace(/\.$/g, "");
   }
 
   // Fuzzy match: does order item name match a promo item name?

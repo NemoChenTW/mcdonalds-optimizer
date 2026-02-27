@@ -33,6 +33,7 @@ promotions:
     - 冰檸檬紅茶
     - 冰無糖綠茶
     - 冰無糖紅茶
+
 - id: one_plus_one_69
   type: pick_combo
   name: 1+1=69 星級點
@@ -63,3 +64,77 @@ promotions:
     - 冰檸檬紅茶
     - 冰無糖綠茶
     - 冰無糖紅茶
+
+- id: sweetheart_card
+  type: buy_a_get_b_free
+  name: 甜心卡
+  card_price: 39
+  group_a:
+  # McCafé
+  - name: 經典那堤(冰/熱)
+    price: 77
+  - name: 冰經典卡布奇諾
+    price: 77
+  - name: 熱經典卡布奇諾
+    price: 58
+  - name: 經典美式咖啡(冰/熱)
+    price: 50
+  # 中杯飲料（展開「中杯汽水」）
+  - name: 雪碧(中)
+    price: 38
+  - name: 零卡可樂(中)
+    price: 38
+  - name: 冰檸檬紅茶(中)
+    price: 38
+  - name: 冰無糖紅茶(中)
+    price: 44
+  - name: 冰無糖綠茶(中)
+    price: 44
+  # 茶飲
+  - name: 冰蜂蜜紅茶
+    price: 58
+  - name: 蜂蜜奶茶(冰/熱)
+    price: 68
+  - name: 冰焦糖奶茶
+    price: 68
+  - name: 奶茶(冰/熱)
+    price: 50
+  # 點心
+  - name: 麥克鷄塊(4塊)
+    price: 49
+  - name: 麥克雞塊(6塊)
+    price: 68
+  - name: 麥克雞塊(10塊)
+    price: 109
+  - name: 薯條(大)
+    price: 66
+  - name: 玉米湯
+    price: 45
+  - name: OREO冰炫風
+    price: 59
+  - name: 雙倍OREO冰炫風
+    price: 65
+  group_b:
+  - name: 經典美式咖啡(冰/熱)
+    price: 50
+  # 中杯飲料（展開「中杯汽水」）
+  - name: 雪碧(中)
+    price: 38
+  - name: 零卡可樂(中)
+    price: 38
+  - name: 冰檸檬紅茶(中)
+    price: 38
+  - name: 冰無糖紅茶(中)
+    price: 44
+  - name: 冰無糖綠茶(中)
+    price: 44
+  - name: 薯餅
+    price: 37
+  - name: 蛋捲冰淇淋
+    price: 18
+  - name: 薯條(小)
+    price: 40
+  - name: 紅茶(冰/熱)
+    price: 38
+  - name: 奶茶(冰/熱)
+    price: 50
