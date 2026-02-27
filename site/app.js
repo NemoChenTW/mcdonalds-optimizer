@@ -32,54 +32,116 @@ async function loadData() {
 }
 
 // --- Build deduplicated item catalog ---
-// Merge original categories into display groups. Each item appears once.
-// Items are assigned to the first group where they're encountered.
-// Price uses the minimum across all occurrences. Combos data is merged.
+// Pass 1: Deduplicate items across all categories, track source categories.
+// Pass 2: Classify each item by name keywords into type-based display groups.
+// Pass 3: Sort within each group so similar items are adjacent.
 function buildCatalog() {
-  const GROUPS = [
-    { key: "main", label: "主餐", cats: ["main_menu", "premium_menu", "new_menu"] },
-    { key: "breakfast", label: "早餐", cats: ["breakfast_combos_v2", "breakfast_singles", "breakfast_platters"] },
-    { key: "limited", label: "期間限定", cats: ["limited_seasonal", "limited_cny", "limited_flash", "new_items"] },
-    { key: "sides", label: "點心", cats: ["sides", "nugget_combos", "breakfast_sides", "salad"] },
-    { key: "drinks", label: "飲料", cats: ["drinks", "mccafe"] },
-    { key: "sharing", label: "分享盒", cats: ["sharing_box"] },
-    { key: "happy", label: "兒童餐", cats: ["happy_meal"] },
-    { key: "delivery", label: "歡樂送", cats: ["breakfast_combos"] },
-  ];
-
   itemCatalog = {};
-  displayGroups = [];
   const cats = menuData.categories;
+  const catKeys = Object.keys(cats).filter(k => k !== "combo_tiers");
 
-  for (const group of GROUPS) {
-    const groupItems = [];
+  // Pass 1: Deduplicate
+  for (const catKey of catKeys) {
+    for (const item of (cats[catKey].items || [])) {
+      const nk = normName(item.name);
+      const cleanName = item.name.replace(/鷄/g, "雞").replace(/\.$/, "");
 
-    for (const catKey of group.cats) {
-      if (!cats[catKey]) continue;
-      for (const item of (cats[catKey].items || [])) {
-        const nk = normName(item.name);
-        const cleanName = item.name.replace(/鷄/g, "雞").replace(/\.$/, "");
-
-        if (!itemCatalog[nk]) {
-          const entry = { name: cleanName, price: item.price, combos: item.combos || null };
-          itemCatalog[nk] = entry;
-          groupItems.push(entry);
-        } else {
-          // Duplicate: keep lower price, merge combos
-          if (item.price < itemCatalog[nk].price) {
-            itemCatalog[nk].price = item.price;
-          }
-          if (item.combos && !itemCatalog[nk].combos) {
-            itemCatalog[nk].combos = item.combos;
-          }
-        }
+      if (!itemCatalog[nk]) {
+        itemCatalog[nk] = {
+          name: cleanName, price: item.price,
+          combos: item.combos || null, srcCats: [catKey],
+        };
+      } else {
+        if (item.price < itemCatalog[nk].price) itemCatalog[nk].price = item.price;
+        if (item.combos && !itemCatalog[nk].combos) itemCatalog[nk].combos = item.combos;
+        if (!itemCatalog[nk].srcCats.includes(catKey)) itemCatalog[nk].srcCats.push(catKey);
       }
     }
-
-    if (groupItems.length > 0) {
-      displayGroups.push({ key: group.key, label: group.label, items: groupItems });
-    }
   }
+
+  // Pass 2: Classify by item type
+  const BREAKFAST_CATS = new Set([
+    "breakfast_combos_v2", "breakfast_singles", "breakfast_platters",
+    "breakfast_sides", "breakfast_combos",
+  ]);
+  const DRINK_KW = ["可樂", "雪碧", "紅茶", "綠茶", "咖啡", "那堤", "奶茶",
+    "柳丁", "鮮乳", "鮮奶", "奶昔", "檸檬", "蜂蜜", "卡布奇諾", "濃縮", "礦泉水"];
+
+  const groups = {
+    burger: [], chicken: [], breakfast: [], sides: [], drinks: [],
+    sharing: [], happy: [], delivery: [],
+  };
+
+  for (const item of Object.values(itemCatalog)) {
+    const n = normName(item.name);
+    const src = item.srcCats;
+    const onlyBreakfast = src.every(c => BREAKFAST_CATS.has(c));
+    const onlyDelivery = src.every(c => c === "breakfast_combos");
+
+    let g;
+    if (onlyDelivery) g = "delivery";
+    else if (n.includes("分享盒") || n.includes("分享餐") || src.includes("sharing_box")) g = "sharing";
+    else if (src.includes("happy_meal")) g = "happy";
+    // Breakfast platters that contain chicken keywords (before chicken check)
+    else if (onlyBreakfast && (n.includes("鬆餅") || n.includes("早餐") || n.includes("餐盤"))) g = "breakfast";
+    // 炸雞雞塊
+    else if (n.includes("雞塊") || n.includes("雞翅") ||
+             ((n.includes("雞腿") || n.includes("辣雞")) && !n.includes("堡")) ||
+             n.includes("炸雞") || n.includes("BHC")) g = "chicken";
+    // Breakfast-specific burgers (滿福堡, 蛋堡, 焙果 — always breakfast, even from limited categories)
+    else if (n.includes("滿福堡") || n.includes("蛋堡") || n.includes("焙果")) g = "breakfast";
+    // 漢堡
+    else if (n.includes("大麥克") || n.includes("麥香雞") || n.includes("麥香魚") || n.includes("堡"))
+      g = onlyBreakfast ? "breakfast" : "burger";
+    else if (onlyBreakfast) g = "breakfast";
+    else if (DRINK_KW.some(k => n.includes(k)) || src.some(c => c === "drinks")) g = "drinks";
+    else g = "sides";
+
+    groups[g].push(item);
+  }
+
+  // Pass 3: Sort — strip modifiers to group same product family, then by price
+  const MODS = ["雙層", "無敵", "咖哩辣味", "咖哩辣", "咖哩", "起司脆薯",
+    "起司三層", "香雞", "炸蝦天婦羅", "韓味", "韓式", "日式豬排",
+    "嫩煎", "勁辣", "BLT", "帕瑪森主廚", "帕瑪森", "蕈菇主廚", "蕈菇安格斯",
+    "蕈菇嫩蛋", "蕈菇豬肉", "蕈菇青蔬", "蕈菇",
+    "椒麻辣味", "椒麻", "原味", "辣味", "金迎招財"];
+
+  function familyKey(name) {
+    let k = normName(name).replace(/^\d+塊?/, "");
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const m of MODS) {
+        if (k.startsWith(m)) { k = k.slice(m.length); changed = true; }
+      }
+    }
+    return k.replace(/\([^)]*\)/g, "");
+  }
+
+  for (const items of Object.values(groups)) {
+    items.sort((a, b) => {
+      const fa = familyKey(a.name), fb = familyKey(b.name);
+      const cmp = fa.localeCompare(fb, "zh-TW");
+      return cmp !== 0 ? cmp : a.price - b.price;
+    });
+  }
+
+  // Build displayGroups
+  const GROUP_META = [
+    { key: "burger", label: "漢堡" },
+    { key: "chicken", label: "炸雞雞塊" },
+    { key: "breakfast", label: "早餐" },
+    { key: "sides", label: "點心" },
+    { key: "drinks", label: "飲料" },
+    { key: "sharing", label: "分享盒" },
+    { key: "happy", label: "兒童餐" },
+    { key: "delivery", label: "歡樂送" },
+  ];
+
+  displayGroups = GROUP_META
+    .filter(g => groups[g.key].length > 0)
+    .map(g => ({ key: g.key, label: g.label, items: groups[g.key] }));
 }
 
 // --- Rendering ---
