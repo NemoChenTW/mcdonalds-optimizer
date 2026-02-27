@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>McD Optimizer</title>
+  <style>
+    :root {
+      --mcd-red: #DA291C;
+      --mcd-yellow: #FFC72C;
+      --bg: #fafafa;
+      --card-bg: #fff;
+      --border: #e0e0e0;
+      --text: #333;
+      --text-light: #666;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 3px solid var(--mcd-yellow);
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 24px;
+      color: var(--mcd-red);
+    }
+
+    header p {
+      color: var(--text-light);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* Category tabs */
+    .category-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .category-tab {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--card-bg);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .category-tab:hover { border-color: var(--mcd-yellow); }
+    .category-tab.active {
+      background: var(--mcd-yellow);
+      border-color: var(--mcd-yellow);
+      font-weight: 600;
+    }
+
+    /* Menu items */
+    .menu-section { margin-bottom: 20px; }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .menu-item:hover { border-color: var(--mcd-yellow); }
+    .menu-item.selected { border-color: var(--mcd-red); background: #fff5f5; }
+
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-price { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+    .item-qty {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 8px;
+    }
+
+    .qty-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--card-bg);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .qty-btn:hover { background: var(--mcd-yellow); }
+
+    .qty-num {
+      font-size: 14px;
+      font-weight: 600;
+      min-width: 16px;
+      text-align: center;
+    }
+
+    /* Selected items bar */
+    .selection-bar {
+      position: sticky;
+      bottom: 0;
+      background: var(--card-bg);
+      border-top: 2px solid var(--mcd-yellow);
+      padding: 12px 16px;
+      margin: 0 -16px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      display: none;
+    }
+
+    .selection-bar.visible { display: block; }
+
+    .selected-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .selected-tag {
+      font-size: 13px;
+      padding: 4px 10px;
+      background: #fff5f5;
+      border: 1px solid var(--mcd-red);
+      border-radius: 12px;
+    }
+
+    .optimize-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--mcd-red);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .optimize-btn:hover { opacity: 0.9; }
+
+    /* Results */
+    .results {
+      margin-bottom: 100px;
+    }
+
+    .result-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    .result-card.best {
+      border-color: var(--mcd-red);
+      border-width: 2px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .result-label { font-size: 14px; font-weight: 600; }
+    .result-price { font-size: 20px; font-weight: 700; color: var(--mcd-red); }
+    .result-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: var(--mcd-red);
+      color: white;
+      border-radius: 10px;
+    }
+
+    .result-steps {
+      list-style: none;
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .result-steps li { padding: 3px 0; }
+    .result-steps li::before { content: "· "; }
+
+    .result-extras {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .result-savings {
+      font-size: 13px;
+      color: #2e7d32;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .upgrade-section {
+      margin-top: 16px;
+    }
+
+    .upgrade-section h3 {
+      font-size: 14px;
+      color: var(--text-light);
+      margin-bottom: 8px;
+    }
+
+    .upgrade-card {
+      background: #fffde7;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .upgrade-cost {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f57f17;
+    }
+
+    .upgrade-extras {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>McD Optimizer</h1>
+    <p>找出最便宜的點餐組合</p>
+  </header>
+
+  <div class="category-tabs" id="categoryTabs"></div>
+  <div class="menu-section" id="menuSection"></div>
+
+  <div class="results" id="results"></div>
+
+  <div class="selection-bar" id="selectionBar">
+    <div class="selected-list" id="selectedList"></div>
+    <button class="optimize-btn" onclick="optimize()">找最便宜</button>
+  </div>
+
+  <script src="optimizer.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+</html>

@@ -1,4 +1,5 @@
-"""Scrape McDonald's Taiwan menu from cpok.tw → data/*.yaml"""
+"""Scrape McDonald's Taiwan menu from cpok.tw → data/*.yaml + site/data/*.json"""
+import json
 import re
 from io import StringIO
 from pathlib import Path
@@ -186,24 +187,37 @@ def scrape() -> dict:
     return {"categories": categories, "promotions": promotions}
 
 
+SITE_DATA_DIR = Path(__file__).parent.parent / "site" / "data"
+
+
 def save(data: dict):
     DATA_DIR.mkdir(exist_ok=True)
+    SITE_DATA_DIR.mkdir(exist_ok=True)
 
-    menu_path = DATA_DIR / "menu.yaml"
-    with open(menu_path, "w", encoding="utf-8") as f:
-        yaml.dump(
-            {"categories": data["categories"]},
-            f, allow_unicode=True, default_flow_style=False, sort_keys=False,
-        )
-    print(f"  menu    → {menu_path}")
+    menu = {"categories": data["categories"]}
+    promos = {"promotions": data["promotions"]}
 
-    promo_path = DATA_DIR / "promotions.yaml"
-    with open(promo_path, "w", encoding="utf-8") as f:
-        yaml.dump(
-            {"promotions": data["promotions"]},
-            f, allow_unicode=True, default_flow_style=False, sort_keys=False,
-        )
-    print(f"  promos  → {promo_path}")
+    # YAML (human-editable, git-tracked)
+    menu_yaml = DATA_DIR / "menu.yaml"
+    with open(menu_yaml, "w", encoding="utf-8") as f:
+        yaml.dump(menu, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    print(f"  menu    → {menu_yaml}")
+
+    promo_yaml = DATA_DIR / "promotions.yaml"
+    with open(promo_yaml, "w", encoding="utf-8") as f:
+        yaml.dump(promos, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    print(f"  promos  → {promo_yaml}")
+
+    # JSON (for static site)
+    menu_json = SITE_DATA_DIR / "menu.json"
+    with open(menu_json, "w", encoding="utf-8") as f:
+        json.dump(menu, f, ensure_ascii=False)
+    print(f"  menu    → {menu_json}")
+
+    promo_json = SITE_DATA_DIR / "promotions.json"
+    with open(promo_json, "w", encoding="utf-8") as f:
+        json.dump(promos, f, ensure_ascii=False)
+    print(f"  promos  → {promo_json}")
 
 
 if __name__ == "__main__":
