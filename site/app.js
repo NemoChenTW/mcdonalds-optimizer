@@ -100,29 +100,10 @@ function buildCatalog() {
     groups[g].push(item);
   }
 
-  // Pass 3: Sort — strip modifiers to group same product family, then by price
-  const MODS = ["雙層", "無敵", "咖哩辣味", "咖哩辣", "咖哩", "起司脆薯",
-    "起司三層", "香雞", "炸蝦天婦羅", "韓味", "韓式", "日式豬排",
-    "嫩煎", "勁辣", "BLT", "帕瑪森主廚", "帕瑪森", "蕈菇主廚", "蕈菇安格斯",
-    "蕈菇嫩蛋", "蕈菇豬肉", "蕈菇青蔬", "蕈菇",
-    "椒麻辣味", "椒麻", "原味", "辣味", "金迎招財"];
-
-  function familyKey(name) {
-    let k = normName(name).replace(/^\d+塊?/, "");
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const m of MODS) {
-        if (k.startsWith(m)) { k = k.slice(m.length); changed = true; }
-      }
-    }
-    return k.replace(/\([^)]*\)/g, "");
-  }
-
+  // Pass 3: Sort by name, then by price
   for (const items of Object.values(groups)) {
     items.sort((a, b) => {
-      const fa = familyKey(a.name), fb = familyKey(b.name);
-      const cmp = fa.localeCompare(fb, "zh-TW");
+      const cmp = a.name.localeCompare(b.name, "zh-TW");
       return cmp !== 0 ? cmp : a.price - b.price;
     });
   }
