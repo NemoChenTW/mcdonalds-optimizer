@@ -206,7 +206,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
       var pairsCount = Math.min(totalA, totalB);
 
       var totalPrice = pairsCount * promo.price;
-      var steps = [promo.name + " x" + pairsCount + " — $" + (pairsCount * promo.price)];
+      var steps = [promo.name + "（含小杯飲料）x" + pairsCount + " — $" + (pairsCount * promo.price)];
 
       var remainingA = totalA - pairsCount;
       for (var j = 0; j < inA.length && remainingA > 0; j++) {
@@ -254,7 +254,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
           }
         }
         var steps = [
-          promo.name + "（" + item.name + " + 飲料）— $" + promo.price,
+          promo.name + "（" + item.name + " + 小杯飲料）— $" + promo.price,
         ];
         if (item.quantity > 1) {
           steps.push(item.name + " 單點 x" + (item.quantity - 1) + " — $" + ((item.quantity - 1) * item.price));
@@ -265,8 +265,8 @@ function findBestCombinations(order, menuData, promoData, couponData) {
           }
         }
         addResult(
-          promo.name + "（加飲料）",
-          totalPrice, steps, "一杯飲料",
+          promo.name + "（加小杯飲料）",
+          totalPrice, steps, "小杯飲料",
           true // always an upgrade since we're adding something
         );
         break; // just show one suggestion per promo
