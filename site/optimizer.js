@@ -78,6 +78,41 @@ function findBestCombinations(order, menuData, promoData, couponData) {
     return tierItem.keywords.some(function(k) { return orderItemName.indexOf(k) >= 0; });
   }
 
+  function lookupMenuPrice(searchName) {
+    var cats = menuData.categories;
+    for (var catKey in cats) {
+      if (catKey === "combo_tiers") continue;
+      var items = cats[catKey].items || [];
+      for (var i = 0; i < items.length; i++) {
+        if (fuzzyMatch(searchName, items[i].name)) return items[i].price;
+      }
+    }
+    return null;
+  }
+
+  function getMinDrinkPrice() {
+    var minPrice = Infinity;
+    var cats = menuData.categories;
+    for (var catKey in cats) {
+      if (catKey === "combo_tiers") continue;
+      var items = cats[catKey].items || [];
+      for (var i = 0; i < items.length; i++) {
+        if (isDrink(items[i].name) && items[i].price < minPrice) {
+          minPrice = items[i].price;
+        }
+      }
+    }
+    return minPrice === Infinity ? 0 : minPrice;
+  }
+
+  function tierItemRetailPrice(tierItem) {
+    if (tierItem.isDrink) return getMinDrinkPrice();
+    if (tierItem.isFries) return lookupMenuPrice(tierItem.desc === "中薯" ? "薯條(中)" : "薯條(小)") || 0;
+    if (tierItem.isNuggets) return lookupMenuPrice("麥克雞塊(6塊)") || 0;
+    if (tierItem.keywords && tierItem.keywords.length > 0) return lookupMenuPrice(tierItem.keywords[0]) || 0;
+    return lookupMenuPrice(tierItem.desc) || 0;
+  }
+
   // === Compute baseline ===
 
   var singleTotal = 0;
@@ -464,10 +499,11 @@ function findBestCombinations(order, menuData, promoData, couponData) {
 
   var results = [];
 
-  function addResult(label, totalPrice, steps, extras, isUpgrade, needsSplit) {
+  function addResult(label, totalPrice, steps, extras, isUpgrade, needsSplit, extrasRetailPrice) {
     if (isUpgrade) {
       var threshold = singleTotal <= 130 ? 50 : singleTotal * 0.3;
       if (totalPrice > singleTotal + threshold) return;
+      if (extrasRetailPrice != null && totalPrice - bestCost > extrasRetailPrice) return;
     }
     results.push({
       label: label,
@@ -616,7 +652,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         }
         addResult(
           promo.name + "（加小杯飲料）",
-          totalPrice, steps, "小杯飲料", true
+          totalPrice, steps, "小杯飲料", true, false, getMinDrinkPrice()
         );
         break;
       }
@@ -648,7 +684,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         }
         addResult(
           promo.name + "（加" + aItem.name + "）",
-          totalPrice, steps, aItem.name, true
+          totalPrice, steps, aItem.name, true, false, aItem.price
         );
         shown++;
       }
@@ -677,7 +713,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         }
         addResult(
           "甜心卡（送" + bItem.name + "）",
-          totalPrice, steps, bItem.name, true
+          totalPrice, steps, bItem.name, true, false, bItem.price
         );
       }
     }
@@ -703,7 +739,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         addResult(
           "甜心卡（買" + aOpt.name + "送" + bItem.name + "）",
           totalPrice, steps, aOpt.name,
-          totalPrice > singleTotal
+          totalPrice > singleTotal, false, aOpt.price
         );
       }
     }
@@ -727,7 +763,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         }
         addResult(
           coupon.name + "（" + coupon.code + "）",
-          totalPrice, steps, o.name + " x1", true
+          totalPrice, steps, o.name + " x1", true, false, o.price
         );
       }
     }
@@ -775,18 +811,22 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         totalPrice += order[oi].price * order[oi].quantity;
         steps.push(order[oi].name + " 單點 x" + order[oi].quantity + " — $" + (order[oi].price * order[oi].quantity));
       }
+      var extrasPrice = 0;
       for (var t = 0; t < tierDef.items.length; t++) {
         var found = false;
         for (var oi = 0; oi < order.length; oi++) {
           if (oi === mi) continue;
           if (matchesTierItem(order[oi].name, tierDef.items[t])) { found = true; break; }
         }
-        if (!found) extras.push(tierDef.items[t].desc);
+        if (!found) {
+          extras.push(tierDef.items[t].desc);
+          extrasPrice += tierItemRetailPrice(tierDef.items[t]);
+        }
       }
 
       addResult(
         mainItem.name + " " + tier + "套餐",
-        totalPrice, steps, extras.join("、"), true
+        totalPrice, steps, extras.join("、"), true, false, extrasPrice
       );
     }
   }
