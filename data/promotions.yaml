@@ -80,6 +80,8 @@ promotions:
   - name: 經典美式咖啡(冰/熱)
     price: 50
   # 中杯飲料（展開「中杯汽水」）
+  - name: 可樂(中)
+    price: 38
   - name: 雪碧(中)
     price: 38
   - name: 零卡可樂(中)
@@ -118,6 +120,8 @@ promotions:
   - name: 經典美式咖啡(冰/熱)
     price: 50
   # 中杯飲料（展開「中杯汽水」）
+  - name: 可樂(中)
+    price: 38
   - name: 雪碧(中)
     price: 38
   - name: 零卡可樂(中)

@@ -340,6 +340,65 @@ function findBestCombinations(order, menuData, promoData, couponData) {
           });
         }
       }
+
+      // Small drink → medium upgrade via sweetheart card
+      // e.g. 雪碧(小) can upgrade to 雪碧(中) (group A) and pair with a group B item for free
+      for (var ai = 0; ai < order.length; ai++) {
+        var oName = order[ai].name;
+        if (matchesGroup(oName, groupANames)) continue;
+        if (oName.indexOf("(小)") < 0) continue;
+
+        var medName = oName.replace("(小)", "(中)");
+        var medGroupA = null;
+        for (var g = 0; g < promo.group_a.length; g++) {
+          if (fuzzyMatch(medName, promo.group_a[g].name)) {
+            medGroupA = promo.group_a[g];
+            break;
+          }
+        }
+        if (!medGroupA) continue;
+
+        // Pair upgraded drink with each group B item in order
+        for (var bi = 0; bi < order.length; bi++) {
+          if (bi === ai) continue;
+          if (!matchesGroup(order[bi].name, groupBNames)) continue;
+
+          allDeals.push({
+            label: "甜心卡",
+            cost: medGroupA.price,
+            consumes: [ai, bi],
+            steps: [
+              medGroupA.name + " — $" + medGroupA.price + "（甜心卡 A 群，" + oName + " 升級）",
+              order[bi].name + " — 免費（甜心卡）"
+            ],
+            extras: null,
+            isUpgrade: false,
+            needsSplit: false,
+            strategyType: "sweetheart",
+            sweetA: ai,
+            sweetB: bi
+          });
+        }
+
+        // Self-pairing: medium version in both groups, qty >= 2
+        if (matchesGroup(medGroupA.name, groupBNames) && order[ai].quantity >= 2) {
+          allDeals.push({
+            label: "甜心卡",
+            cost: medGroupA.price,
+            consumes: [ai, ai],
+            steps: [
+              medGroupA.name + " — $" + medGroupA.price + "（甜心卡 A 群，" + oName + " 升級）",
+              medGroupA.name + " — 免費（甜心卡，" + oName + " 升級）"
+            ],
+            extras: null,
+            isUpgrade: false,
+            needsSplit: false,
+            strategyType: "sweetheart",
+            sweetA: ai,
+            sweetB: ai
+          });
+        }
+      }
     }
   }
 
