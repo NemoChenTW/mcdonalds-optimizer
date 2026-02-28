@@ -200,6 +200,17 @@ function renderSelectionBar() {
   ).join("");
 }
 
+function clearAll() {
+  selected = {};
+  document.getElementById("results").innerHTML = "";
+  renderMenu(activeGroup);
+  renderSelectionBar();
+}
+
+function scrollToTop() {
+  document.getElementById("categoryTabs").scrollIntoView({ behavior: "smooth" });
+}
+
 // --- Optimization ---
 function optimize() {
   const entries = Object.entries(selected);

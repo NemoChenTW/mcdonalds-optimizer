@@ -171,8 +171,13 @@
       white-space: nowrap;
     }
 
+    .bar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
     .optimize-btn {
-      width: 100%;
+      flex: 1;
       padding: 12px;
       background: var(--mcd-red);
       color: white;
@@ -185,6 +190,19 @@
     }
 
     .optimize-btn:hover { opacity: 0.9; }
+
+    .bar-btn {
+      padding: 12px 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .bar-btn:hover { border-color: var(--mcd-yellow); }
 
     /* Results */
     .results {
@@ -293,10 +311,14 @@
 
   <div class="selection-bar" id="selectionBar">
     <div class="selected-list" id="selectedList"></div>
-    <button class="optimize-btn" onclick="optimize()">找最便宜</button>
+    <div class="bar-actions">
+      <button class="optimize-btn" onclick="optimize()">找最便宜</button>
+      <button class="bar-btn" onclick="clearAll()">清除</button>
+      <button class="bar-btn" onclick="scrollToTop()">回選單</button>
+    </div>
   </div>
 
-  <script src="optimizer.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="optimizer.js?v=13"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
