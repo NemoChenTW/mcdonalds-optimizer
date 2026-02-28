@@ -108,8 +108,24 @@ function buildCatalog() {
     });
   }
 
+  // Build popular group from curated list
+  const POPULAR_NAMES = [
+    "麥克雞塊(4塊)", "麥克雞塊(6塊)", "麥克雞塊(10塊)",
+    "薯條(小)", "薯條(中)", "薯條(大)",
+    "蘋果派", "吉事漢堡",
+    "蛋捲冰淇淋", "大蛋捲冰淇淋",
+    "冰檸檬紅茶(中)", "冰無糖紅茶(中)", "冰無糖綠茶(中)",
+    "可樂(小)", "可口可樂Zero(小)",
+  ];
+  const popularItems = [];
+  for (const name of POPULAR_NAMES) {
+    const nk = normName(name);
+    if (itemCatalog[nk]) popularItems.push(itemCatalog[nk]);
+  }
+
   // Build displayGroups
   const GROUP_META = [
+    { key: "popular", label: "熱門商品" },
     { key: "burger", label: "漢堡" },
     { key: "chicken", label: "炸雞雞塊" },
     { key: "breakfast", label: "早餐" },
@@ -119,6 +135,7 @@ function buildCatalog() {
     { key: "happy", label: "兒童餐" },
     { key: "delivery", label: "歡樂送" },
   ];
+  groups.popular = popularItems;
 
   displayGroups = GROUP_META
     .filter(g => groups[g.key].length > 0)
