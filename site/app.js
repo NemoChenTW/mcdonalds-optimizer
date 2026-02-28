@@ -213,6 +213,7 @@ function optimize() {
 
   const results = findBestCombinations(order, menuData, promoData, couponData);
   renderResults(results, order);
+  document.getElementById("results").scrollIntoView({ behavior: "smooth" });
 }
 
 function renderResults(results, order) {
