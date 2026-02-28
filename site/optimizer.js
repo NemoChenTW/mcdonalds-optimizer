@@ -95,7 +95,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
     singleTotal += order[i].price * order[i].quantity;
   }
 
-  function addResult(label, totalPrice, steps, extras, isUpgrade) {
+  function addResult(label, totalPrice, steps, extras, isUpgrade, needsSplit) {
     if (isUpgrade) {
       var threshold = singleTotal <= 130 ? 50 : singleTotal * 0.3;
       if (totalPrice > singleTotal + threshold) return;
@@ -106,6 +106,7 @@ function findBestCombinations(order, menuData, promoData, couponData) {
       steps: steps,
       extras: extras || null,
       isUpgrade: isUpgrade,
+      needsSplit: needsSplit || false,
     });
   }
 
@@ -369,7 +370,23 @@ function findBestCombinations(order, menuData, promoData, couponData) {
         }
       }
 
-      addResult("甜心卡", totalPrice, steps, null, totalPrice > singleTotal);
+      // Check if same A+B combo would repeat (app/kiosk disallows same combo in one order)
+      var needsSplit = false;
+      if (pairsCount > 1) {
+        var uniqueA = inA.length;
+        var uniqueB = inB.length;
+        var maxFromA = 0;
+        for (var j = 0; j < inA.length; j++) {
+          maxFromA += Math.min(inA[j].quantity, uniqueB);
+        }
+        var maxFromB = 0;
+        for (var j = 0; j < inB.length; j++) {
+          maxFromB += Math.min(inB[j].quantity, uniqueA);
+        }
+        needsSplit = pairsCount > Math.min(maxFromA, maxFromB);
+      }
+
+      addResult("甜心卡", totalPrice, steps, null, totalPrice > singleTotal, needsSplit);
     }
 
     // Case 2: Only have A item → suggest getting a free B item (upgrade)

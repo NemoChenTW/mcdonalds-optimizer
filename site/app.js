@@ -263,6 +263,7 @@ function renderResults(results, order) {
           <div>
             <span class="result-label">${r.label}</span>
             ${isBest ? '<span class="result-badge">最便宜</span>' : ''}
+            ${r.needsSplit ? '<span class="result-badge split">需拆單</span>' : ''}
           </div>
           <span class="result-price">$${r.totalPrice}</span>
         </div>
@@ -287,7 +288,7 @@ function renderResults(results, order) {
       const extraCost = r.totalPrice - baseline;
       html += `
         <div class="upgrade-card">
-          <div class="upgrade-cost">+$${extraCost} → ${r.label}</div>
+          <div class="upgrade-cost">+$${extraCost} → ${r.label}${r.needsSplit ? ' <span class="result-badge split">需拆單</span>' : ''}</div>
           <div class="upgrade-extras">總計 $${r.totalPrice}</div>
           <ul class="result-steps">
             ${r.steps.map(s => `<li>${s}</li>`).join("")}
