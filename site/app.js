@@ -115,7 +115,7 @@ function buildCatalog() {
     "蘋果派", "吉事漢堡",
     "蛋捲冰淇淋", "大蛋捲冰淇淋",
     "冰檸檬紅茶(中)", "冰無糖紅茶(中)", "冰無糖綠茶(中)",
-    "可樂(小)", "可口可樂Zero(小)",
+    "可樂(小)", "可口可樂Zero(小)", "雪碧(中)",
   ];
   const popularItems = [];
   for (const name of POPULAR_NAMES) {
