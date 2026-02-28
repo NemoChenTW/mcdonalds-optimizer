@@ -207,10 +207,6 @@ function clearAll() {
   renderSelectionBar();
 }
 
-function scrollToTop() {
-  document.getElementById("categoryTabs").scrollIntoView({ behavior: "smooth" });
-}
-
 // --- Optimization ---
 function optimize() {
   const entries = Object.entries(selected);
