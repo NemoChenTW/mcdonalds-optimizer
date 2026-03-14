@@ -14,8 +14,10 @@ categories:
       price: 250
     - name: 新春頌福澎派分享盒 (3個原味可頌+ 3個巧克力可頌+2份紅豆派)
       price: 310
+    valid_to: '2026-02-28'
   limited_flash:
     label: 快閃限定
+    valid_to: '2026-03-03'
     items:
     - name: 蕈菇無敵豬肉滿福堡加蛋
       price: 100
@@ -30,34 +32,10 @@ categories:
   limited_seasonal:
     label: 期間限定
     items:
-    - name: 霸牛堡
-      price: 164
-    - name: 麥芋球
-      price: 66
-    - name: 咖哩辣鷄腿堡
-      price: 78
-    - name: 咖哩四盎司牛肉堡
-      price: 92
-    - name: 咖哩雙層四盎司牛肉堡
-      price: 132
-    - name: 巧克力三角派
-      price: 50
-    - name: 6塊咖哩辣味鷄塊
-      price: 68
-    - name: 10塊咖哩辣味麥克鷄塊
-      price: 109
-    - name: 草莓奶昔
-      price: 69
-    - name: 香草奶昔
-      price: 69
-    - name: 炸蝦天婦羅安格斯牛肉堡
-      price: 134
-    - name: 炸蝦天婦羅辣鷄堡
-      price: 134
-    - name: 雙蝦天婦羅堡
-      price: 134
-    - name: 炸蝦天婦羅分享盒 (炸蝦天婦羅安格斯牛肉堡/炸蝦天婦羅辣鷄堡任兩件+20塊麥克鷄塊+大薯)
-      price: 470
+    - name: 無敵大麥克
+      price: 118
+    - name: 香雞大麥克
+      price: 98
     - name: 起司脆薯雙牛堡
       price: 104
     - name: 起司脆薯辣鷄堡
@@ -453,8 +431,23 @@ categories:
       price: 99
     - name: 四塊椒麻麥克雞塊餐
       price: 99
+  late_night:
+    label: 深夜食堂
+    items:
+    - name: 深夜鷄塊鷄腿原味雙人餐(麥脆鷄腿*2+麥克鷄塊*10+大薯+中杯冷/熱飲)
+      price: 294
+    - name: 深夜鷄塊鷄腿辣味雙人餐(麥脆鷄腿*2+麥克鷄塊*10+大薯+中杯冷/熱飲)
+      price: 294
+    - name: 深夜鷄塊鷄腿豪爽餐(2塊麥脆鷄腿+10塊麥克鷄塊+大薯+2杯38元冷/熱飲)
+      price: 288
+    - name: 深夜鷄塊鷄腿餐(麥脆鷄腿*1+麥克鷄塊*6+大薯+1杯中杯冷/熱飲)
+      price: 188
+    - name: 深夜鷄塊雙饗餐(12塊麥克鷄塊+大薯+1杯38元冷/熱飲)
+      price: 188
+    - name: 深夜鷄塊獨享餐(12塊麥克鷄塊+大薯+1杯38元冷/熱飲)
+      price: 188
   breakfast_combos:
-    label: 早餐套餐(歡樂送)
+    label: 早餐套餐
     items:
     - name: 吉事蛋堡
       price: 38

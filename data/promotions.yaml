@@ -33,7 +33,6 @@ promotions:
     - 冰檸檬紅茶
     - 冰無糖綠茶
     - 冰無糖紅茶
-
 - id: one_plus_one_69
   type: pick_combo
   name: 1+1=69 星級點
@@ -64,13 +63,12 @@ promotions:
     - 冰檸檬紅茶
     - 冰無糖綠茶
     - 冰無糖紅茶
-
 - id: sweetheart_card
   type: buy_a_get_b_free
   name: 甜心卡
   card_price: 39
+  valid_to: '2026-03-31'
   group_a:
-  # McCafé
   - name: 經典那堤(冰/熱)
     price: 77
   - name: 冰經典卡布奇諾
@@ -79,7 +77,6 @@ promotions:
     price: 58
   - name: 經典美式咖啡(冰/熱)
     price: 50
-  # 中杯飲料（展開「中杯汽水」）
   - name: 可樂(中)
     price: 38
   - name: 雪碧(中)
@@ -92,7 +89,6 @@ promotions:
     price: 44
   - name: 冰無糖綠茶(中)
     price: 44
-  # 茶飲
   - name: 冰蜂蜜紅茶
     price: 58
   - name: 蜂蜜奶茶(冰/熱)
@@ -101,7 +97,6 @@ promotions:
     price: 68
   - name: 奶茶(冰/熱)
     price: 50
-  # 點心
   - name: 麥克鷄塊(4塊)
     price: 49
   - name: 麥克雞塊(6塊)
@@ -119,7 +114,6 @@ promotions:
   group_b:
   - name: 經典美式咖啡(冰/熱)
     price: 50
-  # 中杯飲料（展開「中杯汽水」）
   - name: 可樂(中)
     price: 38
   - name: 雪碧(中)

@@ -13,9 +13,10 @@ import yaml
 URL = "https://cpok.tw/29621"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
 DATA_DIR = Path(__file__).parent.parent / "data"
+SITE_DATA_DIR = Path(__file__).parent.parent / "site" / "data"
 
 
-def fetch_tables() -> list[pd.DataFrame]:
+def fetch_tables() -> list:
     resp = requests.get(URL, headers=HEADERS, timeout=30)
     resp.encoding = "utf-8"
     return pd.read_html(StringIO(resp.text))
@@ -34,7 +35,7 @@ def clean_name(name: str) -> str:
 
 # --- Table parsers ---
 
-def parse_main_menu(table: pd.DataFrame) -> list[dict]:
+def parse_main_menu(table: pd.DataFrame) -> list:
     """Tables with: item | single price | combo A | combo B | ..."""
     items = []
     cols = table.columns.tolist()
@@ -66,7 +67,7 @@ def parse_main_menu(table: pd.DataFrame) -> list[dict]:
     return items
 
 
-def parse_simple_menu(table: pd.DataFrame) -> list[dict]:
+def parse_simple_menu(table: pd.DataFrame) -> list:
     """Tables with: item | price."""
     items = []
     for _, row in table.iterrows():
@@ -81,7 +82,7 @@ def parse_simple_menu(table: pd.DataFrame) -> list[dict]:
     return items
 
 
-def parse_combo_tiers(table: pd.DataFrame) -> list[dict]:
+def parse_combo_tiers(table: pd.DataFrame) -> list:
     """Combo add-on tier table (A經典配餐, B清爽配餐, etc.)."""
     tiers = []
     for _, row in table.iterrows():
@@ -98,23 +99,17 @@ def parse_one_plus_one(table: pd.DataFrame) -> dict:
     cell_a = str(table.iloc[0, 0])
     cell_b = str(table.iloc[0, 1])
 
-    def extract_items(text: str) -> list[dict]:
+    def extract_items(text: str) -> list:
         items = []
-        # Two formats:
-        #   "麥香鷄單點48元"  → name=麥香鷄, price=48
-        #   "麥脆鷄腿1塊(原/辣味) (單點68元)" → name=麥脆鷄腿1塊(原/辣味), price=68
-        # Format 1: name + 單點 + price
         for m in re.finditer(r"([\u4e00-\u9fffA-Za-z0-9]+(?:\([^)]*\))?)單點(\d+)元", text):
             items.append({"name": m.group(1), "price": int(m.group(2))})
-        # Format 2: name + (單點price元) — with space before paren
         for m in re.finditer(r"([\u4e00-\u9fffA-Za-z0-9]+(?:\([^)]*\))?)\s+\(單點(\d+)元\)", text):
             items.append({"name": m.group(1), "price": int(m.group(2))})
-        # Format 3: 【bracket items with price】
         for m in re.finditer(r"【([^】]+?)(\d+)元】", text):
             items.append({"name": m.group(1), "price": int(m.group(2))})
         return items
 
-    def extract_names(text: str) -> list[str]:
+    def extract_names(text: str) -> list:
         names = []
         for name in re.split(r"\s+", text):
             name = name.strip()
@@ -129,65 +124,138 @@ def parse_one_plus_one(table: pd.DataFrame) -> dict:
     }
 
 
+# --- Header-based table matching (robust against index shifts) ---
+
+# (header_keyword, secondary_col_keyword, category_key, label, parser)
+HEADER_RULES = [
+    ("過年", None, "limited_cny", "過年限定", parse_main_menu),
+    ("快閃", None, "limited_flash", "快閃限定", parse_main_menu),
+    ("期間限定", None, "limited_seasonal", "期間限定", parse_main_menu),
+    ("新品", None, "new_items", "新品", parse_simple_menu),
+    ("早餐菜單", None, "breakfast_singles", "早餐單品", parse_main_menu),
+    ("新菜單", None, "new_menu", "新菜單", parse_main_menu),
+    ("超值套餐", None, "combo_tiers", "套餐加價表", parse_combo_tiers),
+    ("主餐菜單", None, "main_menu", "主餐菜單", parse_main_menu),
+    ("極選系列", None, "premium_menu", "極選系列", parse_main_menu),
+    ("沙拉菜單", None, "salad", "沙拉", parse_main_menu),
+    ("分享盒", None, "sharing_box", "分享盒", parse_simple_menu),
+    ("點心和拼盤", None, "sides", "點心", parse_simple_menu),
+    ("Happy Meal", None, "happy_meal", "兒童餐", parse_simple_menu),
+    ("深夜食堂", None, "late_night", "深夜食堂", parse_simple_menu),
+    ("早餐套餐", "超值早餐", "breakfast_combos", "早餐套餐", parse_main_menu),
+    ("早餐套餐", "指定飲料", "breakfast_combos_v2", "早餐套餐v2", parse_main_menu),
+    ("早安餐盤", None, "breakfast_platters", "早安餐盤", parse_main_menu),
+    ("點心品項", None, "breakfast_sides", "早餐點心", parse_simple_menu),
+    ("McCafé", None, "mccafe", "McCafé", parse_simple_menu),
+    ("飲料", None, "drinks", "飲料", parse_simple_menu),
+]
+
+
+def match_tables(tables):
+    """Match tables to categories by header content instead of hardcoded index."""
+    matched = {}  # key -> (index, table, label, parser)
+    used = set()
+
+    for keyword, secondary, key, label, parser in HEADER_RULES:
+        for i, t in enumerate(tables):
+            if i in used:
+                continue
+            col0 = str(t.columns[0])
+            if keyword not in col0:
+                continue
+            if secondary:
+                all_cols = " ".join(str(c) for c in t.columns)
+                if secondary not in all_cols:
+                    continue
+            matched[key] = (i, t, label, parser)
+            used.add(i)
+            break
+
+    # nugget_combos: header is just "主餐" (not "主餐菜單"), has combo columns
+    for i, t in enumerate(tables):
+        if i in used:
+            continue
+        col0 = str(t.columns[0]).strip()
+        if col0 == "主餐" and len(t.columns) >= 5:
+            matched["nugget_combos"] = (i, t, "雞塊套餐", parse_main_menu)
+            used.add(i)
+            break
+
+    # 1+1 promotion tables
+    promo_tables = {}
+    for i, t in enumerate(tables):
+        if i in used:
+            continue
+        col0 = str(t.columns[0])
+        if "1+1=50" in col0:
+            promo_tables["one_plus_one_50"] = (i, t)
+            used.add(i)
+        elif "69元" in col0:
+            promo_tables["one_plus_one_69"] = (i, t)
+            used.add(i)
+
+    return matched, promo_tables, used
+
+
 # --- Main ---
-
-TABLE_MAP = {
-    0: ("limited_cny", "過年限定", parse_main_menu),
-    1: ("limited_flash", "快閃限定", parse_main_menu),
-    2: ("limited_seasonal", "期間限定", parse_main_menu),
-    3: ("new_items", "新品", parse_simple_menu),
-    4: ("breakfast_singles", "早餐單品", parse_main_menu),
-    5: ("new_menu", "新菜單", parse_main_menu),
-    8: ("combo_tiers", "套餐加價表", parse_combo_tiers),
-    9: ("main_menu", "主餐菜單", parse_main_menu),
-    10: ("premium_menu", "極選系列", parse_main_menu),
-    11: ("salad", "沙拉", parse_main_menu),
-    12: ("sharing_box", "分享盒", parse_simple_menu),
-    13: ("nugget_combos", "雞塊套餐", parse_main_menu),
-    14: ("sides", "點心", parse_simple_menu),
-    15: ("happy_meal", "兒童餐", parse_simple_menu),
-    18: ("breakfast_combos", "早餐套餐", parse_main_menu),
-    19: ("breakfast_combos_v2", "早餐套餐v2", parse_main_menu),
-    20: ("breakfast_platters", "早安餐盤", parse_main_menu),
-    21: ("breakfast_sides", "早餐點心", parse_simple_menu),
-    22: ("mccafe", "McCafé", parse_simple_menu),
-    23: ("drinks", "飲料", parse_simple_menu),
-}
-
 
 def scrape() -> dict:
     tables = fetch_tables()
     print(f"Fetched {len(tables)} tables")
 
+    matched, promo_tables, used = match_tables(tables)
+
+    # Report unmatched tables
+    for i in range(len(tables)):
+        if i not in used:
+            col0 = str(tables[i].columns[0])
+            print(f"  [skip] Table {i}: {col0}")
+
+    # Load existing category metadata (e.g. valid_to) to preserve on re-scrape
+    existing_meta = {}
+    menu_yaml = DATA_DIR / "menu.yaml"
+    if menu_yaml.exists():
+        with open(menu_yaml, encoding="utf-8") as f:
+            existing = yaml.safe_load(f)
+        if existing and "categories" in existing:
+            for k, v in existing["categories"].items():
+                if "valid_to" in v:
+                    existing_meta[k] = {"valid_to": str(v["valid_to"])}
+
     categories = {}
-    for idx, (key, label, parser) in TABLE_MAP.items():
-        if idx < len(tables):
-            items = parser(tables[idx])
-            if items:
-                categories[key] = {"label": label, "items": items}
+    for key, (idx, table, label, parser) in sorted(matched.items(), key=lambda x: x[1][0]):
+        items = parser(table)
+        if items:
+            cat = {"label": label}
+            if key in existing_meta:
+                cat.update(existing_meta[key])
+            cat["items"] = items
+            categories[key] = cat
+            print(f"  [{idx:2d}] {label}: {len(items)} items")
 
     promotions = []
-    if len(tables) > 6:
+    if "one_plus_one_50" in promo_tables:
+        idx, t = promo_tables["one_plus_one_50"]
         promotions.append({
             "id": "one_plus_one_50",
             "type": "pick_combo",
             "name": "1+1=50",
             "price": 50,
-            "groups": parse_one_plus_one(tables[6]),
+            "groups": parse_one_plus_one(t),
         })
-    if len(tables) > 7:
+        print(f"  [{idx:2d}] 1+1=50")
+    if "one_plus_one_69" in promo_tables:
+        idx, t = promo_tables["one_plus_one_69"]
         promotions.append({
             "id": "one_plus_one_69",
             "type": "pick_combo",
             "name": "1+1=69 星級點",
             "price": 69,
-            "groups": parse_one_plus_one(tables[7]),
+            "groups": parse_one_plus_one(t),
         })
+        print(f"  [{idx:2d}] 1+1=69")
 
     return {"categories": categories, "promotions": promotions}
-
-
-SITE_DATA_DIR = Path(__file__).parent.parent / "site" / "data"
 
 
 def save(data: dict):
@@ -195,38 +263,48 @@ def save(data: dict):
     SITE_DATA_DIR.mkdir(exist_ok=True)
 
     menu = {"categories": data["categories"]}
-    promos = {"promotions": data["promotions"]}
 
-    # YAML (human-editable, git-tracked)
+    # --- Menu ---
     menu_yaml = DATA_DIR / "menu.yaml"
     with open(menu_yaml, "w", encoding="utf-8") as f:
         yaml.dump(menu, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-    print(f"  menu    → {menu_yaml}")
+    print(f"  menu    -> {menu_yaml}")
 
-    promo_yaml = DATA_DIR / "promotions.yaml"
-    with open(promo_yaml, "w", encoding="utf-8") as f:
-        yaml.dump(promos, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-    print(f"  promos  → {promo_yaml}")
-
-    # JSON (for static site)
     menu_json = SITE_DATA_DIR / "menu.json"
     with open(menu_json, "w", encoding="utf-8") as f:
         json.dump(menu, f, ensure_ascii=False)
-    print(f"  menu    → {menu_json}")
+    print(f"  menu    -> {menu_json}")
+
+    # --- Promotions: merge scraped 1+1 with manually-maintained entries ---
+    promo_yaml = DATA_DIR / "promotions.yaml"
+    scraped_promos = data["promotions"]
+    scraped_ids = {p["id"] for p in scraped_promos}
+
+    manual_promos = []
+    if promo_yaml.exists():
+        with open(promo_yaml, encoding="utf-8") as f:
+            existing = yaml.safe_load(f)
+        if existing and "promotions" in existing:
+            for p in existing["promotions"]:
+                if p.get("id") not in scraped_ids:
+                    manual_promos.append(p)
+
+    all_promos = scraped_promos + manual_promos
+    promos = {"promotions": all_promos}
+
+    with open(promo_yaml, "w", encoding="utf-8") as f:
+        yaml.dump(promos, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    print(f"  promos  -> {promo_yaml}")
 
     promo_json = SITE_DATA_DIR / "promotions.json"
     with open(promo_json, "w", encoding="utf-8") as f:
         json.dump(promos, f, ensure_ascii=False)
-    print(f"  promos  → {promo_json}")
+    print(f"  promos  -> {promo_json}")
 
 
 if __name__ == "__main__":
     print("Scraping McDonald's Taiwan menu...")
     data = scrape()
-
-    for key, cat in data["categories"].items():
-        print(f"  {cat['label']}: {len(cat['items'])} items")
     print(f"  Promotions: {len(data['promotions'])}")
-
     save(data)
     print("Done!")

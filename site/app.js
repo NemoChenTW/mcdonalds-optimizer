@@ -27,8 +27,36 @@ async function loadData() {
   menuData = await menuResp.json();
   promoData = await promoResp.json();
   couponData = await couponResp.json();
+  filterExpired();
   buildCatalog();
   renderCategories();
+}
+
+// --- Filter expired data ---
+function filterExpired() {
+  var today = new Date().toISOString().slice(0, 10);
+
+  // Coupon batch: skip all if past valid_to
+  if (couponData && couponData.valid_to && couponData.valid_to < today) {
+    couponData = { coupons: [] };
+  }
+
+  // Menu categories: remove expired ones (requires valid_to in category)
+  if (menuData && menuData.categories) {
+    for (var key in menuData.categories) {
+      var cat = menuData.categories[key];
+      if (cat.valid_to && cat.valid_to < today) {
+        delete menuData.categories[key];
+      }
+    }
+  }
+
+  // Promotions: remove expired ones (requires valid_to per promotion)
+  if (promoData && promoData.promotions) {
+    promoData.promotions = promoData.promotions.filter(function(p) {
+      return !p.valid_to || p.valid_to >= today;
+    });
+  }
 }
 
 // --- Build deduplicated item catalog ---
